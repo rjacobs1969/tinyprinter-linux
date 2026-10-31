@@ -14,6 +14,22 @@ the actual printer. **You do not need REA, JADX, an APK, Android, or an account
 to use this driver.** No proprietary application, decompiled application source,
 or app artwork is included.
 
+## Printed examples
+
+Actual output from the X6h using this Linux driver and Wordcraft.
+
+### Formatted text
+
+Bold, italic, underlined, strikethrough, and larger text printed on the roll:
+
+![X6h printing formatted text from Wordcraft on Linux](hello.jpg)
+
+### Images
+
+A cat image in Wordcraft alongside its monochrome thermal print:
+
+![Cat image in Wordcraft alongside the matching X6h thermal print](cat.jpg)
+
 ## What it does
 
 - Bluetooth Classic RFCOMM printing; channel 1 on the tested device.
