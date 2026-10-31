@@ -1,0 +1,83 @@
+*PPD-Adobe: "4.3"
+*FormatVersion: "4.3"
+*FileVersion: "1.0"
+*LanguageVersion: English
+*LanguageEncoding: ISOLatin1
+*PCFileName: "X6H.PPD"
+*Manufacturer: "Tiny Print"
+*Product: "(X6h)"
+*ModelName: "Tiny Print X6h"
+*ShortNickName: "X6h"
+*NickName: "Tiny Print X6h - 57mm monochrome"
+*PSVersion: "(3010.000) 0"
+*LanguageLevel: "3"
+*ColorDevice: False
+*DefaultColorSpace: Gray
+*FileSystem: False
+*Throughput: "1"
+*LandscapeOrientation: Plus90
+*TTRasterizer: Type42
+*cupsVersion: 2.0
+*cupsManualCopies: True
+*cupsFilter: "application/vnd.cups-pdf 0 tinyprint-filter"
+*cupsFilter: "application/pdf 0 tinyprint-filter"
+*OpenUI *PageSize/Paper length: PickOne
+*OrderDependency: 10 AnySetup *PageSize
+*DefaultPageSize: Roll100
+*PageSize Roll50/57 x 50 mm: "<</PageSize[161.575 141.732]>>setpagedevice"
+*PageSize Roll100/57 x 100 mm: "<</PageSize[161.575 283.465]>>setpagedevice"
+*PageSize Roll150/57 x 150 mm: "<</PageSize[161.575 425.197]>>setpagedevice"
+*PageSize Roll200/57 x 200 mm: "<</PageSize[161.575 566.929]>>setpagedevice"
+*PageSize Roll300/57 x 300 mm: "<</PageSize[161.575 850.394]>>setpagedevice"
+*CloseUI: *PageSize
+*OpenUI *PageRegion/Paper length: PickOne
+*OrderDependency: 10 AnySetup *PageRegion
+*DefaultPageRegion: Roll100
+*PageRegion Roll50/57 x 50 mm: "<</PageSize[161.575 141.732]>>setpagedevice"
+*PageRegion Roll100/57 x 100 mm: "<</PageSize[161.575 283.465]>>setpagedevice"
+*PageRegion Roll150/57 x 150 mm: "<</PageSize[161.575 425.197]>>setpagedevice"
+*PageRegion Roll200/57 x 200 mm: "<</PageSize[161.575 566.929]>>setpagedevice"
+*PageRegion Roll300/57 x 300 mm: "<</PageSize[161.575 850.394]>>setpagedevice"
+*CloseUI: *PageRegion
+*DefaultImageableArea: Roll100
+*ImageableArea Roll50: "11.668 0 149.908 141.732"
+*ImageableArea Roll100: "11.668 0 149.908 283.465"
+*ImageableArea Roll150: "11.668 0 149.908 425.197"
+*ImageableArea Roll200: "11.668 0 149.908 566.929"
+*ImageableArea Roll300: "11.668 0 149.908 850.394"
+*DefaultPaperDimension: Roll100
+*PaperDimension Roll50: "161.575 141.732"
+*PaperDimension Roll100: "161.575 283.465"
+*PaperDimension Roll150: "161.575 425.197"
+*PaperDimension Roll200: "161.575 566.929"
+*PaperDimension Roll300: "161.575 850.394"
+*VariablePaperSize: True
+*MaxMediaWidth: "161.575"
+*MaxMediaHeight: "14173.228"
+*HWMargins: "11.668 0 11.668 0"
+*CustomPageSize True: "pop pop pop <</PageSize[5 -2 roll] /ImagingBBox null>>setpagedevice"
+*ParamCustomPageSize Width: 1 points 161.575 161.575
+*ParamCustomPageSize Height: 2 points 28.346 14173.228
+*ParamCustomPageSize WidthOffset: 3 points 0 0
+*ParamCustomPageSize HeightOffset: 4 points 0 0
+*ParamCustomPageSize Orientation: 5 int 0 3
+*OpenUI *Resolution/Resolution: PickOne
+*OrderDependency: 20 AnySetup *Resolution
+*DefaultResolution: 200dpi
+*Resolution 200dpi/200 DPI: "<</HWResolution[200 200]>>setpagedevice"
+*CloseUI: *Resolution
+*OpenUI *Darkness/Print darkness: PickOne
+*OrderDependency: 30 AnySetup *Darkness
+*DefaultDarkness: Normal
+*Darkness Light/Light: ""
+*Darkness Normal/Normal: ""
+*Darkness Dark/Dark: ""
+*CloseUI: *Darkness
+*OpenUI *Trim/Trim trailing blank paper: Boolean
+*OrderDependency: 40 AnySetup *Trim
+*DefaultTrim: True
+*Trim True/Yes: ""
+*Trim False/No: ""
+*CloseUI: *Trim
+*DefaultFont: Courier
+*Font Courier: Standard "(001.007)" Standard ROM

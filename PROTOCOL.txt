@@ -1,0 +1,85 @@
+Target and evidence
+===================
+APK: com.frogtosea.tinyPrint.apk, Tiny Print 1.3.87 / version code 147.
+SHA-256: 372c337f5ca835d149364934dd6f096b3cc5abe5d1736ed6928bad3364ceeddd
+REA 6.4.0 with verified JADX headless MCP 0.7.1; static analysis, no APK execution.
+
+REA evidence IDs:
+Package identity:
+  ev_df3968e65468e067db84337f17acdd3cd3911b6bb0ead942fb8366b1481e14ba
+Monochrome encoder, PrintDataUtils.eachLinePixToCmdB:
+  ev_904e198d1141bf0577316e0eaa81d82aefa4fb43cc6dc8ad121ce92fc76ceb59
+Print sequencing, PrintDataUtils.BitmapToData:
+  ev_7f62062376244f5a49ce6f1edd6ba10080dae511225097c7b775ddb7f1c2a105
+Speed command, PrintDataUtils.feedPaper:
+  ev_c5f166bac864b5fce4ff5873316add63ccdb023cf79f3d18eee1cc4c8f26997b
+Paper feed, PrintDataUtils.paperLe:
+  ev_a1a6dc1b36a32474311a7ef905e6bc48c829172a9e0978356726429d4c39b2fd
+Connection initialization, BluetoothUtils.initBlue:
+  ev_26f8b4ff7e9318f6d5a0a5ac572736d5f9becd28a2942bdc24c51e6d565f58cc
+Model energy selection, PrinterModelUtils.getPrintEneragy:
+  ev_a66a1124b433cfb9ad81f887765c19e18a2be4bf19b52c76a101f73ce4b84269
+Flow control and status decoding, BluetoothUtils.notifyData1:
+  ev_1f4dbaca077c7aef77250c45cf05d6b1a76312ad3d0d6d6a3f8956b1be9a0eaf
+Transport selection, BluetoothUtils.printDate:
+  ev_235460d5728414c74a34bce76a4f97efd3f1652b05dbdceefb01e8b033eb84ca
+CRC update, BluetoothOrder.calcCrc8 (overload 2):
+  ev_15701bf948fcaef19d3d1363fbc88195a5fd00404d2a5c593daa7e5ef0e594bc
+
+REA's <clinit> method views omitted field initializers. Supplementary direct
+JADX class decompilation recovered these constants and constructor mappings:
+com.Utils.PrintModelUtils.java:195: X6h, 384 dots, nominal 200 DPI, SPP=true,
+  image energy 5000, text energy 8000, image/text speed 10, write size 180,
+  write delay 4 ms, paper count 2, no D1 key and no new activation.
+com.Utils.PrinterModel.java:818-875: constructor-to-field assignments.
+com.Utils.PrintModelUtils.java:2801: X6h included in Tiny Print's model list.
+com.lib.blueUtils.BluetoothOrder.java:33-74: command constants.
+com.lib.blueUtils.BLESPPUtils.java:38,317-327: SPP UUID 1101, channel-1 fallback.
+com.lib.blueUtils.BLESPPUtils.java:685-690: buffer-full/resume notifications.
+These are supplementary static observations, not REA Evidence records.
+Complete evidence and private decompiler outputs were retained locally during
+the investigation; proprietary decompiled source is not shipped here.
+
+Wire format (observed statically, corroborated by the live info/status queries):
+  51 78 | command | direction | payload length (uint16 LE) | payload | CRC | FF
+CRC-8: polynomial 0x07, initial 0, no reflection or final XOR, payload only.
+Direction 00 is host request; 01 is printer response.
+Commands used:
+  A4: darkness preset, payload 33.
+  AF: print energy, uint16 LE; default 5000.
+  BE: monochrome image mode, payload 00.
+  BD: motor speed, payload 0A for image rows, 19 for tear-off feed.
+  A2: raw raster row, 48 bytes, black=1, leftmost pixel=least-significant bit.
+  A1: paper feed, uint16 LE dots; app's two 48-dot feeds combined into 96.
+  A3: status query, payload 00.
+  A8: device information query, payload 00.
+  AE response 10: pause writes; response 00: resume.
+A3 status byte: 01 paper out, 02 cover open, 04 overheating, 08 low battery,
+  10 charging, 80 printing. The driver checks every error bit independently.
+
+Live observations on the tested X6h, 2026-10-31:
+  Unpaired RFCOMM channel 1 connected successfully.
+  A8 reply: 5178a8010a00790003332e302e343500dbff
+  A3 reply: 5178a3010300001529c9ff
+  A3 status byte 00: no reported errors. A8 contains ASCII "3.0.45".
+  Independent driver printed a bordered text/bar test strip, 384 x 180 dots.
+  User confirmed "Printed correctly". No account or activation exchange needed.
+  An initial CUPS installation failed because the MAC address was placed in
+  the URI hostname. Moving it into the path (tinyprint:///MAC?channel=1) fixed
+  URI parsing. The installed X6h queue was subsequently observed as enabled,
+  and desktop printing from Wordcraft was confirmed by the user.
+  The real CUPS 2.4.20 cupsfilter successfully ran the PDF-to-protocol filter
+  using an isolated configuration. Its complete output passed protocol checks.
+  PPD structure passed cupstestppd with the uninstalled-filter check excluded.
+  The installer checks structure before deployment, then installed filters.
+
+Design choices, not Android behavior:
+  CUPS PDF filter + root-run RFCOMM backend, nominal 200 DPI, paper centered.
+  Fixed-width pages, trailing blank trimming, bounded energy/feed settings.
+  Raw A2 rows rather than app RLE/LZO or grayscale paths.
+  No identity rewriting, account activation, firmware updates, or app assets.
+
+Unknown until tested separately:
+  Other printer models/firmware, grayscale, gap labels, battery calibration,
+  and timing under every thermal/load condition. End-to-end CUPS and direct
+  printing were confirmed for the tested X6h, not for other hardware models.

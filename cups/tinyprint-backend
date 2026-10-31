@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /opt/tinyprint/venv/bin/python -m tinyprint.cups backend "$@"

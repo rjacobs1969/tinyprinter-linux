@@ -1,0 +1,456 @@
+Tiny Print X6h on Linux - complete usage guide
+=============================================
+
+Contents
+  1. Printer requirements and installation
+  2. Quick examples: PDF, image, and text
+  3. All X6h CUPS driver options
+  4. Text font size, spacing, wrapping, and margins
+  5. Exact font sizes and font families
+  6. PDF layout and image sizing
+  7. Direct Bluetooth CLI: all commands and options
+  8. Queue management and saved defaults
+  9. Troubleshooting and limitations
+
+Commands below use queue X6h and placeholder address AA:BB:CC:DD:EE:FF.
+Replace that address with your printer's actual Bluetooth MAC address.
+Replace filenames such as label.pdf and picture.png with your actual files.
+Run commands in a terminal; sudo is needed only for system administration.
+
+
+1. Printer requirements and installation
+---------------------------------------
+
+Supported device: X6h; Bluetooth names commonly have a suffix, e.g. X6h-1234.
+Transport: Bluetooth Classic RFCOMM, channel 1.
+Paper: continuous 57 mm roll.
+Printable area: 384 dots, nominal 200 DPI, about 48.768 mm wide, centered.
+Output: monochrome, one bit per pixel. Color input becomes black and white.
+
+Turn on the printer and disconnect it from the Android app before printing.
+No pairing was needed for the tested device. Other firmware may need pairing.
+This is an independent protocol implementation; no Android, account, cloud
+login, rfcomm device binding, or proprietary library is required.
+
+System installation on Arch / CachyOS:
+
+  git clone https://github.com/rjacobs1969/tinyprinter-linux.git
+  cd tinyprinter-linux
+  sudo pacman -S --needed cups cups-filters ghostscript python
+  sudo sh ./install.sh AA:BB:CC:DD:EE:FF
+  lpstat -p X6h -v X6h
+
+Optional queue name:
+
+  sudo sh ./install.sh AA:BB:CC:DD:EE:FF MyLabels
+
+The installer creates /opt/tinyprint/venv, two CUPS wrappers, and the queue.
+It enables CUPS, does not share the queue over the network, and does not change
+Bluetooth trust settings. It refuses to replace an existing queue.
+The X6h queue is available in ordinary desktop print dialogs.
+
+Direct CLI installation, without configuring CUPS:
+
+  cd tinyprinter-linux
+  python3 -m venv .venv
+  .venv/bin/python -m pip install .
+
+After system installation the CLI also exists at:
+
+  /opt/tinyprint/venv/bin/tinyprint
+
+Examples in section 7 use .venv/bin/tinyprint. You can substitute that installed
+path when you do not have a local .venv.
+
+
+2. Quick examples: PDF, image, and text
+-------------------------------------
+
+Print a PDF on a 100 mm page:
+
+  lp -d X6h -o PageSize=Roll100 label.pdf
+
+Print an image fitted onto a 100 mm page using CUPS image conversion:
+
+  lp -d X6h -o PageSize=Roll100 -o fit-to-page picture.png
+
+Print an image directly, with its height determined by its aspect ratio:
+
+  .venv/bin/tinyprint print --address AA:BB:CC:DD:EE:FF picture.png
+
+Print a short message from the command line:
+
+  printf 'Hello from Linux!\nSecond line\n' | lp -d X6h -o PageSize=Roll50
+
+Print a text file:
+
+  lp -d X6h -o PageSize=Roll100 notes.txt
+
+Print larger text:
+
+  printf 'Large text\n' | lp -d X6h -o PageSize=Roll50 -o cpi=8 -o lpi=4.8
+
+Print two copies:
+
+  lp -d X6h -n 2 -o PageSize=Roll100 label.pdf
+
+CUPS converts plain text and images to PDF before passing them to the driver.
+The direct tinyprint CLI accepts PDFs and images, not plain text or stdin.
+
+
+3. All X6h CUPS driver options
+-----------------------------
+
+Set options on a job using -o NAME=VALUE. Names and values are case-sensitive.
+
+Option       Values                          Default     Meaning
+-----------  ------------------------------  ----------  ----------------------
+PageSize     Roll50, Roll100, Roll150,        Roll100     57 mm paper width;
+             Roll200, Roll300                            length in mm
+             Custom.57xHEIGHTmm
+Resolution   200dpi                          200dpi      Only supported DPI
+Darkness     Light, Normal, Dark             Normal      Thermal print energy
+Trim         True, False                     True        Remove trailing white
+                                                         rows from each page
+
+Darkness energies: Light=4250, Normal=5000, Dark=5750.
+Darkness affects heating, not the size of the text or image.
+
+Examples:
+
+  lp -d X6h -o PageSize=Roll50 -o Darkness=Dark label.pdf
+  lp -d X6h -o PageSize=Roll150 -o Trim=False label.pdf
+  lp -d X6h -o PageSize=Custom.57x180mm label.pdf
+  lp -d X6h -o Resolution=200dpi -o Darkness=Light label.pdf
+
+Custom lengths must be 10-5000 mm; the width must remain 57 mm.
+Always include the units, preferably mm.
+
+Trim=True removes blank paper AFTER the last black pixel; it does not remove
+top margins, change font size, or remove whitespace inside your content.
+An entirely blank page retains one raster row. Every page also adds a 96-dot
+tear-off feed, about 12.2 mm, even with Trim=True.
+Trim=False retains the full selected page height plus that feed.
+
+PageRegion is a PPD layout companion to PageSize, not an additional paper mode.
+Use PageSize in command-line examples.
+
+Generic CUPS job controls useful with this queue:
+
+  -d X6h           Select the printer.
+  -n 2             Number of copies; driver accepts 1-100.
+  -t "Label title" Give the job a name.
+
+This guide lists the implemented driver options and useful conversion options.
+Do not assume every generic CUPS option works: the driver itself does not
+implement duplex, n-up, page-range selection, or arbitrary rotation. Prepare
+those changes in the source PDF/application instead.
+
+
+4. Text font size, spacing, wrapping, and margins
+-----------------------------------------------
+
+Plain text uses the CUPS texttopdf converter. Its font-size controls are cpi
+and lpi, NOT a generic -o font-size=... option.
+
+  cpi = characters per inch. Lower cpi makes characters wider.
+  lpi = lines per inch. Lower lpi makes characters taller and lines farther apart.
+
+Adjust both together to keep similar character proportions:
+
+Appearance       Options
+---------------  ------------------
+Small            -o cpi=15 -o lpi=9
+Normal           -o cpi=10 -o lpi=6
+Large            -o cpi=8  -o lpi=4.8
+Very large       -o cpi=6  -o lpi=3.6
+
+The converter's font scale is 120/cpi horizontally and 68/lpi vertically.
+For example, cpi=8 and lpi=4.8 give scales of 15 and about 14.2 points.
+These are independent scales, not a single typographic point-size setting.
+For an exact 16-point font, use the PDF example in section 5.
+
+Examples:
+
+  printf 'Small text\n' | lp -d X6h -o PageSize=Roll50 -o cpi=15 -o lpi=9
+  printf 'Normal text\n' | lp -d X6h -o PageSize=Roll50 -o cpi=10 -o lpi=6
+  printf 'Large text\n' | lp -d X6h -o PageSize=Roll50 -o cpi=8 -o lpi=4.8
+  lp -d X6h -o PageSize=Roll100 -o cpi=12 -o lpi=7.2 notes.txt
+
+Larger text fits fewer characters across the roll. Before extra margins,
+the printable width is about 1.92 inches: cpi=10 allows roughly 19 characters
+per line, cpi=8 roughly 15, and cpi=15 roughly 28.
+
+Text conversion options:
+
+Option          Values / units      Meaning
+--------------  ------------------  -----------------------------------------
+cpi             Positive number     Character width / horizontal font scale
+lpi             Positive number     Font height and line spacing
+wrap            true, false         Wrap long lines; default is true
+columns         Positive integer    Text columns; use 1 on this narrow printer
+page-left       Points              Left margin measured from paper edge
+page-right      Points              Right margin measured from paper edge
+page-top        Points              Top margin
+page-bottom     Points              Bottom margin
+prettyprint     false               Keep plain layout without pretty headings
+
+One point = 1/72 inch = about 0.353 mm. A 6-point margin is about 2.1 mm.
+Keep left/right margins at least 12 points (about 4.2 mm), because the paper
+is wider than the printhead. Smaller values can put text outside the area the
+driver prints. Top/bottom margins can be smaller.
+
+Compact text with explicit margins and wrapping:
+
+  printf 'Item: coffee\nPrice: 2.50\nThank you!\n' | \
+    lp -d X6h -o PageSize=Roll50 \
+      -o cpi=10 -o lpi=6 -o columns=1 -o wrap=true \
+      -o page-left=12 -o page-right=12 \
+      -o page-top=6 -o page-bottom=6 -o prettyprint=false
+
+To disable wrapping:
+
+  lp -d X6h -o PageSize=Roll100 -o wrap=false notes.txt
+
+Without wrapping, text beyond the right edge may be lost. Text longer than
+the selected page height flows onto additional pages, each with tear-off feed.
+Avoid prettyprint=true on a narrow roll: it adds headings and large margins.
+For non-ASCII text, use UTF-8 input and installed fonts containing your glyphs.
+For complex scripts or precise layout, prepare a PDF in an appropriate editor.
+
+
+5. Exact font sizes and font families
+------------------------------------
+
+For exact point sizes, bold text, font families, or mixed sizes on one label,
+create a PDF and print it. cpi/lpi only affect plain text conversion; they
+cannot change fonts already embedded in a PDF or drawn into an image.
+
+The following example creates a 57 x 50 mm PDF with a 16-point bold heading
+and a 10-point monospaced second line. Ghostscript is already a dependency.
+
+gs -q -dSAFER -dBATCH -dNOPAUSE -sDEVICE=pdfwrite \
+  -sOutputFile=font-label.pdf - <<'PS'
+%!PS
+<</PageSize [161.575 141.732]>> setpagedevice
+/Helvetica-Bold findfont 16 scalefont setfont
+12 112 moveto (Hello Linux!) show
+/Courier findfont 10 scalefont setfont
+12 88 moveto (Exact font sizes) show
+showpage
+PS
+
+  lp -d X6h -o PageSize=Roll50 font-label.pdf
+
+Change 16 or 10 to your desired size in points.
+Common built-in font names: Helvetica, Helvetica-Bold, Courier, Courier-Bold,
+Times-Roman, and Times-Bold.
+
+PostScript coordinates are in points; the origin is the bottom-left corner.
+Increasing the x coordinate moves text right; increasing y moves it up.
+Keep text between approximately x=12 and x=149 points on this paper.
+Long text does not automatically wrap in this example.
+Escape literal parentheses and backslashes in PostScript text strings.
+This simple example is intended for ASCII text, not arbitrary Unicode.
+
+Keep the PDF page size and CUPS PageSize matched if exact physical font size
+matters: fitting a differently sized PDF onto the roll scales its fonts too.
+For more elaborate labels, use an editor's custom 57 mm page width, choose
+your font/size there, export PDF, and select the matching roll length.
+
+
+6. PDF layout and image sizing
+-----------------------------
+
+PDF:
+  lp -d X6h -o PageSize=Roll100 document.pdf
+  lp -d X6h -o PageSize=Custom.57x180mm document.pdf
+  .venv/bin/tinyprint print --address AA:BB:CC:DD:EE:FF \
+    document.pdf --height-mm 180
+
+Every PDF page is fitted to the chosen 57 mm-wide page, then cropped to the
+centered 384-dot printable area. Multipage PDFs print page by page.
+A4 pages will shrink substantially and their text may become unreadable.
+For best results, create the PDF at 57 mm wide with about 4.2 mm side margins.
+Choose the corresponding page length before printing.
+
+Images through CUPS:
+  lp -d X6h -o PageSize=Roll100 -o fit-to-page picture.png
+  lp -d X6h -o PageSize=Roll150 -o fit-to-page photograph.jpg
+
+The CUPS image converter controls the image's placement on the selected paper.
+fit-to-page requests fitting the image onto that paper.
+
+Images through the direct CLI:
+  .venv/bin/tinyprint print --address AA:BB:CC:DD:EE:FF picture.png
+
+The direct CLI scales the image to exactly 384 pixels wide, preserving its
+aspect ratio. Its height is not constrained by --height-mm; that option is
+PDF-only. For smaller artwork, place it on a wider white canvas before printing.
+At nominal 200 DPI:
+  dots = millimeters * 200 / 25.4
+  millimeters = dots * 25.4 / 200
+
+A 384 x 200 image prints about 48.8 x 25.4 mm before tear-off feed.
+Supported image formats depend on Pillow; common choices are PNG, JPEG,
+BMP, TIFF, and WebP. Direct image printing uses the first image/frame only.
+Transparent backgrounds are composited onto white, and EXIF orientation is
+honored. Images use Pillow's monochrome dithering; PDF conversion uses
+Ghostscript's monochrome rasterizer.
+Changing an image's printed font size means changing the image or its scale,
+not adding cpi/lpi to the print command.
+
+
+7. Direct Bluetooth CLI: all commands and options
+------------------------------------------------
+
+Read printer information and status without printing:
+
+  .venv/bin/tinyprint info --address AA:BB:CC:DD:EE:FF
+
+Print a PDF or image without the CUPS queue:
+
+  .venv/bin/tinyprint print --address AA:BB:CC:DD:EE:FF label.pdf \
+    --height-mm 100 --energy 5000 --feed 96
+
+Render protocol bytes to a new file, without contacting the printer:
+
+  .venv/bin/tinyprint encode label.pdf label.bin --height-mm 100
+
+encode refuses to overwrite an existing output file. Its output is printer
+protocol data, not a PDF, and is intended for offline inspection. Do not pass
+it back to tinyprint print or send it as arbitrary raw data through CUPS.
+
+All arguments:
+
+Argument        Commands          Default    Meaning / allowed range
+--------------  ----------------  ---------  ---------------------------------
+file            print, encode     Required   Input PDF or image filename
+output          encode            Required   New output protocol-data filename
+--address       info, print       Required   Bluetooth MAC address
+--channel       info, print       1          RFCOMM channel, 1-30
+--height-mm     print, encode     100        PDF page length, 10-5000 mm
+--energy        print, encode     5000       Thermal energy, 1-8000
+--feed          print, encode     96         Tear-off feed, 0-1000 dots
+--keep-blank    print, encode     Off        Preserve trailing blank page rows
+-h, --help      All                          Display command help
+
+Examples:
+
+  .venv/bin/tinyprint print --address AA:BB:CC:DD:EE:FF label.pdf \
+    --height-mm 50 --energy 5750
+  .venv/bin/tinyprint print --address AA:BB:CC:DD:EE:FF picture.png --feed 48
+  .venv/bin/tinyprint print --address AA:BB:CC:DD:EE:FF label.pdf --keep-blank
+  .venv/bin/tinyprint encode picture.png preview.bin --feed 0
+  .venv/bin/tinyprint --help
+  .venv/bin/tinyprint print --help
+
+The CLI has no copies option; repeat the command when needed or use CUPS -n.
+No direct text command, Bluetooth scanning command, USB transport, or font-size
+flag is implemented. Use CUPS for text and normal desktop job management.
+Do not print simultaneously from the CLI, CUPS, and Android.
+
+
+8. Queue management and saved defaults
+-------------------------------------
+
+List driver options and current selections (an asterisk marks the selection):
+
+  lpoptions -p X6h -l
+
+Inspect queue state, connection URI, and jobs:
+
+  lpstat -p X6h -v X6h
+  lpstat -o X6h
+
+Save defaults for your current user:
+
+  lpoptions -p X6h -o PageSize=Roll50 -o Darkness=Normal -o Trim=True
+  lpoptions -p X6h -o cpi=10 -o lpi=6
+
+These are user preferences, not system-wide changes. Per-job -o options
+override them. cpi/lpi only affect text jobs.
+
+Make X6h your current user's default printer:
+
+  lpoptions -d X6h
+  printf 'Default printer test\n' | lp
+
+Remove a saved option and return to the queue/converter default:
+
+  lpoptions -p X6h -r cpi -r lpi
+  lpoptions -p X6h -r PageSize
+
+Cancel a specific job, using the ID shown by lpstat:
+
+  cancel X6h-123
+
+Cancel all jobs for this queue:
+
+  cancel -a X6h
+
+Resume a stopped queue after fixing a problem:
+
+  cupsenable X6h
+
+If printer administration permissions are required, use sudo for cupsenable.
+Check whether a failed job partially printed before resuming or resubmitting.
+
+
+9. Troubleshooting and limitations
+----------------------------------
+
+"Bad device-uri" during installation:
+  Use the updated installer. The correct URI has three slashes:
+    tinyprint:///AA:BB:CC:DD:EE:FF?channel=1
+  The MAC address is a path, not a hostname; colons otherwise look like a port.
+  Rerunning the installer is appropriate if queue creation previously failed.
+
+"Printer drivers are deprecated":
+  This is a warning, not an installation failure on CUPS 2.x.
+  This implementation uses a PPD and is not a driverless CUPS 3 implementation.
+
+"The printer or class does not exist":
+  Installation did not create the named queue, or a different name was used.
+  Inspect lpstat -p and correct the installation/name before printing.
+
+"Queue X6h already exists" from the installer:
+  The installer intentionally refuses to overwrite it. To update only Python
+  driver code for an existing queue, from this folder run:
+    sudo /opt/tinyprint/venv/bin/python -m pip install .
+  Changing the PPD or wrapper scripts requires their separate redeployment.
+
+No print / connection error:
+  Check power, paper, lid, battery, Bluetooth range, and Android disconnection.
+  Inspect lpstat -p X6h, then try a nonprinting direct info query.
+  No automatic Bluetooth address discovery is implemented.
+
+Text too small:
+  For plain text lower cpi and lpi together; for PDFs adjust the source font
+  and page layout; for images enlarge the text in the image.
+
+Text cut off at the sides:
+  Keep about 4.2 mm side margins in PDFs/text. The 57 mm paper is wider than
+  the actual 48.8 mm printable area. Enable wrap=true for plain text.
+
+Too much blank paper:
+  Use Trim=True, reduce the top margin in your source/text options, and use a
+  shorter page length. CUPS still adds the tear-off feed after every page.
+  Use the direct CLI --feed option if you need a different feed length.
+
+Printer or queue errors:
+  Paper-out, open cover, overheating, low battery, malformed replies,
+  disconnects, and timeouts are reported as errors. CUPS stops rather than
+  automatically duplicating a potentially partially printed job.
+
+Limits:
+  X6h only; other models/firmware are not assumed compatible.
+  Continuous paper only; no gap-label calibration or grayscale protocol mode.
+  Raster pages cannot exceed 40000 dots in height.
+  CUPS spool input is limited to 100 MiB and copies to 100.
+  Do not send ESC/POS, firmware commands, or arbitrary raw data to the backend.
+
+Developer checks:
+  .venv/bin/python -m unittest discover -s tests -v
+
+Protocol findings and REA evidence are recorded in PROTOCOL.txt.
